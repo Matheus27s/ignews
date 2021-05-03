@@ -22,9 +22,25 @@ export default NextAuth({
 
       try {
         await fauna.query(
-          q.Create(
-            q.Collection('users'),
-            { data: { email } }
+          q.If(
+            q.Not(
+              q.Exists(
+                q.Match(
+                  q.Index('user_by_email'),
+                  q.Casefold(user.email)
+                )
+              )
+            ),
+            q.Create(
+              q.Collection('users'),
+              { data: { email } }
+            ),
+            q.Get(
+              q.Match(
+                q.Index('user_by_email'),
+                q.Casefold(user.email)
+              )
+            )
           )
         );
         return true;
@@ -35,3 +51,9 @@ export default NextAuth({
     },
   }
 });
+
+// Se(If) não(Not) existe(Exists) um usuário ao qual ele realiza um 'where'(Match)
+
+// Casefold - Normaliza o email
+
+// Get - Select
