@@ -23,7 +23,10 @@ export const config = {
 }
 
 const relevantEvents = new Set([
-    "checkout.session.completed"
+    "checkout.session.completed",
+    "customer.subscriptions.created",
+    "customer.subscriptions.updated",
+    "customer.subscriptions.deleted",
 ])
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
@@ -36,7 +39,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         try {
             event = stripe.webhooks.constructEvent(buf, secret, process.env.STRIPE_WEBHOOK_SECRET);
-        } catch(err) {
+        } catch (err) {
             return res.status(400).send('Webhook error: ' + err.message);
         }
 
@@ -47,6 +50,20 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             try {
 
                 switch (type) {
+
+                    case 'customer.subscriptions.created':
+                    case 'customer.subscriptions.updated':
+                    case 'customer.subscriptions.deleted':
+
+                    const subscription = event.data.object as Stripe.Subscription
+
+                    await saveSubscription(
+                        subscription.id,
+                        subscription.customer.toString(),
+                    )
+
+                    break;
+
                     case 'checkout.session.completed':
 
                         //Forma de saber quais os atributos
@@ -58,7 +75,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         )
 
                         break;
-    
+
                     default: { throw new Error('Unhandled event.') }
                 }
 
@@ -66,7 +83,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 return res.json({ err: 'Webhook handler failed.' })
             }
 
-           
+
             console.log('Evento recebido', event);
         }
 
