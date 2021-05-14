@@ -2,11 +2,10 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { Readable } from 'stream';
 import Stripe from "stripe";
 import { stripe } from "../../services/stripe";
-
-//Converte Readable em um objeto.
+import { saveSubscription } from "./_lib/manageSubscription";
 
 async function butter(readable: Readable) {
-    const chunks = []; //Pedaços da stream
+    const chunks = [];
 
     for await (const chunk of readable) {
         chunks.push(
@@ -17,17 +16,11 @@ async function butter(readable: Readable) {
     return Buffer.concat(chunks);
 }
 
-//Por padrão o nex tem uma forma de entender a requisição(está vindo como um JSON). Então precisamos desabilitar o entendimento padrão do NEXT.
 export const config = {
     api: {
         bodyParser: false,
     }
 }
-
-//Eventos relevantes
-//Define quais eventos são importantes a serem ouvidos. Os outros não iremos levar em consideração.
-
-//SET - Array que não repete itens.
 
 const relevantEvents = new Set([
     "checkout.session.completed"
@@ -36,14 +29,9 @@ const relevantEvents = new Set([
 export default async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method === "POST") {
 
-        //buf - requisição em sí
         const buf = await butter(req);
-
-        //Código passado para a rota. Mesmo código quando rodamos o CLI do stripe. Ready! Your webhook signing secret is whsec_sVjtxZjLvBluKfWDwkalulrytnURCCqN
-        //Vamos adicionar no .env.local
         const secret = req.headers['stripe-signature']
 
-        //verificar e os valores batem.
         let event: Stripe.Event
 
         try {
@@ -52,10 +40,33 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             return res.status(400).send('Webhook error: ' + err.message);
         }
 
-        //Retornado o tipo do evento para decidir se é relevante ou não.
         const { type } = event;
 
         if (relevantEvents.has(type)) {
+
+            try {
+
+                switch (type) {
+                    case 'checkout.session.completed':
+
+                        //Forma de saber quais os atributos
+                        const checkoutSession = event.data.object as Stripe.Checkout.Session
+
+                        await saveSubscription(
+                            checkoutSession.subscription.toString(),
+                            checkoutSession.customer.toString(),
+                        )
+
+                        break;
+    
+                    default: { throw new Error('Unhandled event.') }
+                }
+
+            } catch (err) {
+                return res.json({ err: 'Webhook handler failed.' })
+            }
+
+           
             console.log('Evento recebido', event);
         }
 
