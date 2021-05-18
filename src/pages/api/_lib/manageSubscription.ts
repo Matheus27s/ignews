@@ -6,6 +6,7 @@ import { stripe } from "../../../services/stripe";
 export async function saveSubscription(
     subscriptionId: string,
     customerId: string,
+    createAction = false,
 ) {
     //buscar os dados do usuário na colletions 'users'.
     //Através da ref
@@ -33,11 +34,36 @@ export async function saveSubscription(
         price_id: subscription.items.data[0].price.id
     }
 
-    //Salvando esses dados no banco de dados
-    await fauna.query(
-        q.Create(
-            q.Collection('subscriptions'),
-            { data: subscriptionData }
+    if (createAction) { //Posso criar uma subscription
+
+        //Salvando esses dados no banco de dados
+        await fauna.query(
+            q.Create(
+                q.Collection('subscriptions'),
+                { data: subscriptionData }
+            )
         )
-    )
+
+    } else { //Vou atualizar
+        await fauna.query(
+            q.Replace(
+                q.Select(
+                    "ref",
+                    q.Get(
+                        q.Match(
+                            q.Index('subscription_by_id'),
+                            subscriptionId,
+                        )
+                    )
+                ),
+                { data: subscriptionData }
+            )
+        )
+    }
+
+
 }
+
+//Métodos de atualização no fauna
+//Replace - Substitue por completo.
+//Update - atualizo 'alguns' campos daquele registro
