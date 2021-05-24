@@ -1,5 +1,11 @@
+import { GetStaticProps } from 'next';
+import Prismic from '@prismicio/client';
+
 import Head from 'next/head';
 import React from 'react';
+
+import { getPrismicClient } from '../../services/prismic';
+
 import styles from './styles.module.scss';
 
 export default function Posts() {
@@ -12,7 +18,7 @@ export default function Posts() {
             <main className={styles.container}>
                 <div className={styles.posts}>
                     <a href="#" >
-                        <time>12 de ma href="#rço de 2021</time>
+                        <time>12 de março de 2021</time>
                         <strong>Creaa Monorepo with Lerna & Yarn Workspaces</strong>
                         <p>In this guide, you will learn how to create a Monorepo to manage multiple packages with a shared build, test, and release process.</p>
                     </a>
@@ -33,3 +39,24 @@ export default function Posts() {
         </>
     );
 }
+
+export const getStaticProps: GetStaticProps = async () => {
+    const prismic = getPrismicClient();
+
+    const response = await prismic.query([
+        Prismic.predicates.at('document.type', 'publication')
+        ], { 
+            fetch: ['publication.title', 'publication.content'],
+            pageSize: 100, //Quantos posts eu posso trazer.
+        }
+    )
+
+    console.log(response);
+
+    return {
+        props: {}
+    }
+}
+
+//[] - Pode ser mais de um.
+//fetch: [''] - Quais dados eu quero retornar dessa publicação
