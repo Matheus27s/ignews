@@ -44,6 +44,15 @@ export const getServerSideProps: GetServerSideProps = async ({ req, params }) =>
     //Qual post precisamos recuperar? Pode ser recuperado pelo método 'params' que vem na requisição;
     const { slug } = params;
 
+    if(!session.activeSubscription) {
+        return {
+            redirect: {
+                destination: '/',
+                permanent: false,
+            }
+        }
+    }
+
     const prismic = getPrismicClient(req);
 
     //Busco qualquer elemento pelo seu UID
