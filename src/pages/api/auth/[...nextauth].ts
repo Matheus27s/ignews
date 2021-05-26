@@ -1,7 +1,6 @@
 import { query as q } from 'faunadb';
 
 import NextAuth from 'next-auth';
-import { session } from 'next-auth/client';
 import Providers from 'next-auth/providers';
 
 import { fauna } from '../../../services/fauna';
@@ -14,16 +13,9 @@ export default NextAuth({
       scope: 'read:user'
     }),
   ],
-  jwt: {
-    signingKey: process.env.SIGNING_KEY
-  },
   callbacks: {
     async session(session) {
-      session.user.email
-
       try {
-
-        //Verifica se o usuário tem uma inscrição ativa ou não
         const userActiveSubscription = await fauna.query(
           q.Get(
             q.Intersection([
@@ -49,17 +41,18 @@ export default NextAuth({
 
         return {
           ...session,
-          activeSubscription: userActiveSubscription
+          activeSubscription: userActiveSubscription,
         };
 
       } catch {
         return {
           ...session,
-          activeSubscription: null
+          activeSubscription: null,
 
         }
       }
     },
+    
     async signIn(user, account, profile) {
       const { email } = user
 
@@ -94,9 +87,3 @@ export default NextAuth({
     },
   }
 });
-
-// Se(If) não(Not) existe(Exists) um usuário ao qual ele realiza um 'where'(Match)
-
-// Casefold - Normaliza o email
-
-// Get - Select

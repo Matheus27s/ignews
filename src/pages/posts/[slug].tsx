@@ -8,13 +8,15 @@ import { getPrismicClient } from "../../services/prismic";
 import styles from './post.module.scss';
 
 interface PostProps {
-    slug: string;
-    title: string;
-    content: string;
-    updatedAt: string;
+    post: {
+        slug: string;
+        title: string;
+        content: string;
+        updatedAt: string;
+    }
 }
 
-export default function Post({ post }) {
+export default function Post({ post }: PostProps) {
     return (
         <>
             <Head>
@@ -39,12 +41,11 @@ export default function Post({ post }) {
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ req, params }) => {
-    const session = await getSession({ req }); //Busca através dos cooks
+    const session = await getSession({ req });
 
-    //Qual post precisamos recuperar? Pode ser recuperado pelo método 'params' que vem na requisição;
     const { slug } = params;
 
-    if(!session.activeSubscription) {
+    if (!session?.activeSubscription) {
         return {
             redirect: {
                 destination: '/',
@@ -54,16 +55,13 @@ export const getServerSideProps: GetServerSideProps = async ({ req, params }) =>
     }
 
     const prismic = getPrismicClient(req);
-
-    //Busco qualquer elemento pelo seu UID
     const response = await prismic.getByUID('publication', String(slug), {});
 
-    //Formatação dos dados
     const post = {
         slug,
         title: RichText.asText(response.data.title),
         content: RichText.asHtml(response.data.content),
-        updatedAt: new Date(response.last_publication_date).toLocaleDateString('pt-BR', { //Ultima data de atualização do post
+        updatedAt: new Date(response.last_publication_date).toLocaleDateString('pt-BR', {
             day: '2-digit',
             month: 'long',
             year: 'numeric'
